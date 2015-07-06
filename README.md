@@ -22,6 +22,8 @@ would be like than working on a typical demo.
 
 ## The demo architecture
 
+TODO: 
+
 Let's take a look at the high-level architecture for this portion of the demo to make sure we have
 a good shared understanding to base our discussion on:
 
@@ -111,3 +113,16 @@ In conjunction with the modified registry, we added a priming step to the Ansibl
 1.  Creates a project namespace for priming the registry
 2.  Tags the nodejs builder image on each of the nodes
 3.  Push the tagged nodejs builder image to the registry from each node
+
+## Requirement 2: Resize from 1 to 10 replicas in under 20 seconds
+
+TODO: not sure what to say here -- if I remember correctly, this was pretty much attainable with
+a smaller cluster once we had the priming working correctly. 
+
+## Requirement 3: Scale from 10 to 1026 replicas in under 3 minutes
+
+TODO: talk about effect of cluster size and local ssd on scale-up time
+
+## Running the demo at scale
+
+TODO: discuss soak testing and proxy work
