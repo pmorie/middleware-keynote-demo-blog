@@ -27,7 +27,43 @@ TODO:
 Let's take a look at the high-level architecture for this portion of the demo to make sure we have
 a good shared understanding to base our discussion on:
 
+
 TODO: block diagram here and flesh out explanation
+OpenShift arch diagram:
+```
+                                   ------------------
+                                  | OpenShift Master |
+                                   ------------------
+                                           |
+                     ----------------------------------------------
+                    /               /            \                 \
+                   |               |              |                 |
+                   v               v              v                 v
+             ------------   -------------   -------------       -------------
+            | Infra Node | | App Node 1  | | App Node 2  | ... | App Node 20 |
+             ------------   -------------   -------------       -------------
+                   |             \                |                   /
+            -----------           ------------------------------------
+           /           \                  |                          |
+          |             |                 |                          |
+          v             v                 v                          v
+ -----------------   --------         -----------               ------------
+| Custom Registry | | Router |       | Proxy App |             | Sketch App |
+ -----------------   --------         -----------               ------------
+                                          |                          |
+                                    -------------               -----------------
+                                   /             \             /                 \
+                                  |               |           |                   |
+                              ---------       ---------    ----------       -------------
+                             | Proxy 1 | ... | Proxy 8 |  | Sketch 1 | ... | Sketch 1026 |
+                              ---------       ---------    ----------       -------------
+```
+TODO: Overall demo arch diagram, since the logical flow would be difficult to show in the context of the OpenShift arch diagram.
+
+Mobile App -> Feed Henry -> Hex UI -> Sketch Proxy -> Sketch Pod
+
+We'll probably also want to discuss the arch of the Hex UI a bit and how it was doing the api watch to get the pod status as they came up, and also map to the pod IPs.
+
 
 ## Initial state: a semi-primed cluster
 
@@ -117,11 +153,15 @@ In conjunction with the modified registry, we added a priming step to the Ansibl
 ## Requirement 2: Resize from 1 to 10 replicas in under 20 seconds
 
 TODO: not sure what to say here -- if I remember correctly, this was pretty much attainable with
-a smaller cluster once we had the priming working correctly. 
+a smaller cluster once we had the priming working correctly. Yes, once we pre-pulled all the images and primed the registry, this fell into place, though at that point, we had already scaled out, so it could quite possibly take longer than 20 seconds on a single node, where on the 20 nodes, each container is created in parallel.
 
 ## Requirement 3: Scale from 10 to 1026 replicas in under 3 minutes
 
 TODO: talk about effect of cluster size and local ssd on scale-up time
+
+On cluster size: each node is limited to creating a single container at a time, so for each additional node the number of containers created in parallel increased.
+
+On local ssds, I'm not sure this really had an effect in the end. We'll probably want to do some trial runs to verify though, but I suspect most of the time we were chasing i/o type bottlenecks were because of the api server issues we were hitting.
 
 ## Running the demo at scale
 
