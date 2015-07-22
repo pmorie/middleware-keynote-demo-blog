@@ -13,7 +13,7 @@ this blog post will discuss are:
 
 1.  We had to be able to do a build of the 'sketchpod' application in under 30 seconds
 2.  We had to be able to scale from 1 replicas of the built pod to 10 replicas in under 20 seconds
-3.  We had to be able to scale from 10 -> 1026 replicas in under 3 minutes
+3.  We had to be able to scale from 10 to 1026 replicas in under 3 minutes
 4.  Since OpenShift v3 GA wasn't finished, we had to make the beta4 release meet all of the above
 
 The timing requirements were dictated by the storyboard for the presentation.  I had never worked
@@ -106,22 +106,19 @@ Let's take a closer look at the actual specifics of the cluster:
         1.  pod, builder, deployer, router, registry images for infra node
         2.  pod, builder, deployer, nodejs images for the app nodes
 
-## Requirement 1: Build the 'sketchpod' application in under 30 seconds
+## Building the 'sketchpod' application in under 30 seconds
 
-TODO: needs more context probably
+The first requirement we attacked was the one to reliably build the sketchpod application and push
+it to the internal registry in under 30 seconds.
 
-The first requirement we'll talk about is that in order for the demo presentation to flow
-correctly, we really needed to be able to build the sketchpod image in under 30 seconds.
+When I am given a requirement like this one, the first thing I like to do is get what's called a
+"p90" value around how the system performs without any optimizations.  A p90 value is a measure of
+the time that 90% of measurements fall _under_.  In other words, if I perform some experiment X
+number of times and my results indicate a p90 value of one minute, it means that 90% of the time
+when I perform the experiment, it completes in _under one minute_. You can read more about p90
+values [here](https://en.wikipedia.org/wiki/Cumulative_frequency_analysis).
 
-When I am given a requirement like the 'build in 30 seconds' one we had for this demo, the first
-thing I like to do is get what's called a "p90" value around how the system performs without any
-optimizations.  A p90 value is a measure in cumulative frequency analysis that measures the time
-that 90% of measurements fall _under_.  In other words, if I perform some experiment X number of
-times and my results indicate a p90 value of one minute, it means that 90% of the time when I
-perform the experiment, it completes in _under one minute_. You can read more about p90 values
-[here](https://en.wikipedia.org/wiki/Cumulative_frequency_analysis).
-
-While performing time trials to determine the p90 value for this requirment, we noticed that the
+While performing time trials to determine the p90 value for this requirement, we noticed that the
 results 'clustered' into 2 groups -- builds that took approximately 25-30 seconds and builds that
 took approximately two minutes.  We expected that the timing requirement here would be easy to hit,
 and so it was very surprising to see the builds taking two minutes.  
@@ -150,18 +147,31 @@ In conjunction with the modified registry, we added a priming step to the Ansibl
 2.  Tags the nodejs builder image on each of the nodes
 3.  Push the tagged nodejs builder image to the registry from each node
 
-## Requirement 2: Resize from 1 to 10 replicas in under 20 seconds
-
-TODO: not sure what to say here -- if I remember correctly, this was pretty much attainable with
-a smaller cluster once we had the priming working correctly. Yes, once we pre-pulled all the images and primed the registry, this fell into place, though at that point, we had already scaled out, so it could quite possibly take longer than 20 seconds on a single node, where on the 20 nodes, each container is created in parallel.
+After adding the priming steps to the playbook, we found that our 5 node cluster satisfied the
+the build time requirements, and the requirements for scaling up from a single replica to ten
+replicas.
 
 ## Requirement 3: Scale from 10 to 1026 replicas in under 3 minutes
 
-TODO: talk about effect of cluster size and local ssd on scale-up time
+The next major requirment we had to hit was resizing from ten replicas to the total number of
+replicas required for the demo (1026).  
 
-On cluster size: each node is limited to creating a single container at a time, so for each additional node the number of containers created in parallel increased.
+TODO: what was our scale up time on the smaller cluster size?
 
-On local ssds, I'm not sure this really had an effect in the end. We'll probably want to do some trial runs to verify though, but I suspect most of the time we were chasing i/o type bottlenecks were because of the api server issues we were hitting.
+The Kubernetes kubelet is the node-level agent that ensures that each node stays in the desired
+state.  To do this, the kubelet compares the pods scheduled onto a node with the pods that are
+actually running, and takes action to make these two lists match.  In the context of optimizing
+scale-up of a single replication controller throughout the cluster, the relevant behavior to know
+about is that the kubelet basically loops through the scheduled pods and starts ones that aren't
+running, one at a time.
+
+Therefore, the total number of pods that can be being started at any one time is linear in the
+number of nodes in the cluster.  We increased the cluster size from five nodes to ten nodes to
+twenty nodes and found that a twenty-node cluster was able to acheive our requirement for the
+resize.
+
+The mood was jubilant once we had acheived the time requirement for the large resize, but our work
+wasn't done yet.
 
 ## Running the demo at scale
 
